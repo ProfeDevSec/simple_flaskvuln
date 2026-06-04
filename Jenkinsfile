@@ -100,36 +100,32 @@ stage('Security Test - SCA Dependencies') {
 stage('Security Test - DAST ZAP') {
     steps {
         sh """
-            rm -rf \${WORKSPACE}/zap-reports
-            mkdir -p \${WORKSPACE}/zap-reports
-            chmod 777 \${WORKSPACE}/zap-reports
-
-            docker run --rm \
-              --network host \
-              -v \${WORKSPACE}/zap-reports:/zap/wrk/:rw \
-              ghcr.io/zaproxy/zaproxy:stable \
-                zap-baseline.py \
-                  -t http://localhost:5000/hello?name=test \
-                  -r zap_report.html \
-                  -J zap_report.json \
-                  --auto || true
-                  
-            docker run --rm \
-            -v \${WORKSPACE}/zap-reports:/zap/wrk/:rw \
-            alpine chown -R \$(id -u):\$(id -g) /zap/wrk
-
-             echo "=== Contenido zap-reports ==="
-             ls -la \${WORKSPACE}/zap-reports/ || echo "Directorio vacío" 
-        """
-
-        publishHTML(target: [
-            allowMissing         : true,
-            alwaysLinkToLastBuild: true,
-            keepAll              : true,
-            reportDir            : 'zap-reports',
-            reportFiles          : 'zap_report.html',
-            reportName           : 'OWASP ZAP Report'
-        ])
+        rm -rf \${WORKSPACE}/zap-reports
+        mkdir -p \${WORKSPACE}/zap-reports
+        chmod 777 \${WORKSPACE}/zap-reports
+  
+        docker run --rm \
+          --network host \
+          -v \${WORKSPACE}/zap-reports:/zap/wrk/:rw \
+          ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t http://localhost:5000/hello?name=test \
+              -r zap_report.html \
+              -J zap_report.json \
+              --auto || true
+  
+        echo "=== Contenido zap-reports ==="
+        ls -la \${WORKSPACE}/zap-reports/
+      """
+  
+      publishHTML(target: [
+        allowMissing         : true,
+        alwaysLinkToLastBuild: true,
+        keepAll              : true,
+        reportDir            : "${WORKSPACE}/zap-reports",
+        reportFiles          : 'zap_report.html',
+        reportName           : 'OWASP ZAP Report'
+      ])
       sh 'find ${WORKSPACE} -name "*.html" -o -name "*.xml" -o -name "*.json" 2>/dev/null | head -30'
     }
 }
