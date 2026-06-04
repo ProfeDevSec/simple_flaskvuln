@@ -69,6 +69,8 @@ stage('Security Test - SCA Dependencies') {
                 --noupdate
 
             chmod -R 755 \${WORKSPACE}/dc-report    
+            echo "=== Contenido dc-report ==="
+            ls -la \${WORKSPACE}/dc-report/ || echo "Directorio vacío"
         """
         publishHTML(target: [
           allowMissing         : true,
@@ -78,6 +80,7 @@ stage('Security Test - SCA Dependencies') {
           reportFiles          : 'dependency-check-report.html',
           reportName           : 'Dependency-Check Report'
         ])
+      sh 'find ${WORKSPACE} -name "*.html" -o -name "*.xml" -o -name "*.json" 2>/dev/null | head -30'
     }
 }    
 
@@ -99,6 +102,9 @@ stage('Security Test - DAST ZAP') {
                   -r zap_report.html \
                   -J zap_report.json \
                   --auto || true
+
+             echo "=== Contenido zap-reports ==="
+             ls -la \${WORKSPACE}/zap-reports/ || echo "Directorio vacío" 
         """
 
         publishHTML(target: [
@@ -109,13 +115,24 @@ stage('Security Test - DAST ZAP') {
             reportFiles          : 'zap_report.html',
             reportName           : 'OWASP ZAP Report'
         ])
+      sh 'find ${WORKSPACE} -name "*.html" -o -name "*.xml" -o -name "*.json" 2>/dev/null | head -30'
     }
 }
 }
 
   post {
     always {
-      archiveArtifacts artifacts: '**/*.html,**/*.xml,**/*.json', allowEmptyArchive: true
+      sh """
+        cp \${WORKSPACE}/dc-report/*.html \${WORKSPACE}/ 2>/dev/null || true
+        cp \${WORKSPACE}/dc-report/*.xml \${WORKSPACE}/ 2>/dev/null || true
+        cp \${WORKSPACE}/zap-reports/*.html \${WORKSPACE}/ 2>/dev/null || true
+        cp \${WORKSPACE}/zap-reports/*.json \${WORKSPACE}/ 2>/dev/null || true
+      """
+
+      archiveArtifacts(
+        artifacts         : 'dependency-check-report.html,dependency-check-report.xml,zap_report.html,zap_report.json',
+        allowEmptyArchive : true
+      )
       sh 'docker rm -f flask-app || true'
     }
   }
