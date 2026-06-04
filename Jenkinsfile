@@ -47,20 +47,24 @@ stage('Analyze - SonarQube') {
     }
 }
 
-    stage('Security Test - SCA Dependencies') {
+stage('Security Test - SCA Dependencies') {
     steps {
-        sh """
-            docker run --rm \
-              --network devsecops-network \
-              -v \${WORKSPACE}:/src \
-              -v \${WORKSPACE}/dc-report:/report \
-              owasp/dependency-check:latest \
-                --scan /src \
-                --format HTML \
-                --format XML \
-                --out /report \
-                --project devsecops-lab
-        """
+        withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_KEY')]) {
+            sh """
+                docker run --rm \
+                  --network devsecops-network \
+                  -v \${WORKSPACE}:/src \
+                  -v \${WORKSPACE}/dc-report:/report \
+                  -v dc-nvd-cache:/usr/share/dependency-check/data \
+                  owasp/dependency-check:latest \
+                    --scan /src \
+                    --format HTML \
+                    --format XML \
+                    --out /report \
+                    --project devsecops-lab \
+                    --nvdApiKey \${NVD_KEY}
+            """
+        }
         dependencyCheckPublisher(
             pattern: '**/dc-report/dependency-check-report.xml'
         )
