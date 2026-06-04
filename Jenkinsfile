@@ -32,7 +32,7 @@ pipeline {
         '''
       }
     }
-    stage('Analyze - SonarQube') {
+stage('Analyze - SonarQube') {
     steps {
         withSonarQubeEnv('sonarqube-server') {
             withEnv(["PATH+SONAR=${tool 'sonarqube-scanner'}/bin"]) {
@@ -40,7 +40,6 @@ pipeline {
                     sonar-scanner \
                       -Dsonar.projectKey=devsecops-lab \
                       -Dsonar.sources=. \
-                      -Dsonar.host.url=http://sonarqube-custom:9000/ \
                       -Dsonar.python.version=3
                 """
             }
