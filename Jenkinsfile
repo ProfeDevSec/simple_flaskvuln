@@ -28,7 +28,7 @@ pipeline {
         sh '''
           docker rm -f flask-app || true
           docker run -d --name flask-app -p 5000:5000 flask-vuln-app:${BUILD_NUMBER}
-          sleep 5+
+          sleep 5
           curl -sf http://localhost:5000/hello?name=test || echo "App no responde"
         '''
       }
@@ -70,9 +70,14 @@ stage('Security Test - SCA Dependencies') {
 
             chmod -R 755 \${WORKSPACE}/dc-report    
         """
-        dependencyCheckPublisher(
-            pattern: 'dc-report/dependency-check-report.xml'
-        )
+        publishHTML(target: [
+          allowMissing         : true,
+          alwaysLinkToLastBuild: true,
+          keepAll              : true,
+          reportDir            : 'dc-report',
+          reportFiles          : 'dependency-check-report.html',
+          reportName           : 'Dependency-Check Report'
+        ])
     }
 }    
 
@@ -105,6 +110,7 @@ stage('Security Test - DAST ZAP') {
             reportName           : 'OWASP ZAP Report'
         ])
     }
+}
 }
 
   post {
