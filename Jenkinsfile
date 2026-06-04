@@ -66,6 +66,8 @@ stage('Security Test - SCA Dependencies') {
                 --out /report \
                 --project devsecops-lab \
                 --noupdate
+
+            chmod -R 755 \${WORKSPACE}/dc-report    
         """
         dependencyCheckPublisher(
             pattern: '**/dc-report/dependency-check-report.xml'
