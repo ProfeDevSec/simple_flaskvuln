@@ -79,7 +79,7 @@ stage('Security Test - SCA Dependencies') {
       docker run --rm \
         -v dc-report-vol:/report \
         -v \${WORKSPACE}/dc-report:/dest \
-        alpine sh -c "cp /report/* /dest/ && chmod 644 /dest/*"
+        alpine sh -c 'cp /report/*.html /dest/ && cp /report/*.xml /dest/ && chmod 644 /dest/*'
 
       echo "=== Archivos copiados al workspace ==="
       ls -la \${WORKSPACE}/dc-report/
