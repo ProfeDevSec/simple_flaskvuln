@@ -36,15 +36,12 @@ stage('Analyze - SonarQube') {
     steps {
         withSonarQubeEnv('sonarqube-server') {
             withEnv(["PATH+SONAR=${tool 'sonarqube-scanner'}/bin"]) {
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh """
-                        sonar-scanner \
-                          -Dsonar.projectKey=devsecops-lab \
-                          -Dsonar.sources=. \
-                          -Dsonar.python.version=3 \
-                          -Dsonar.token=${SONAR_TOKEN}
-                    """
-                }
+                sh """
+                    sonar-scanner \
+                      -Dsonar.projectKey=devsecops-lab \
+                      -Dsonar.sources=. \
+                      -Dsonar.python.version=3
+                """
             }
         }
     }
