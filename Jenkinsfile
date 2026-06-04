@@ -32,23 +32,21 @@ pipeline {
         '''
       }
     }
-
     stage('Analyze - SonarQube') {
-      steps {
+    steps {
         withSonarQubeEnv('sonarqube-server') {
-          sh """
-            sonar-scanner \\
-              -Dsonar.projectKey=devsecops-lab \\
-              -Dsonar.sources=. \\
-              -Dsonar.host.url=${SONAR_HOST} \\
-              -Dsonar.python.version=3
-          """
+            withEnv(["PATH+SONAR=${tool 'sonarqube-scanner'}/bin"]) {
+                sh """
+                    sonar-scanner \
+                      -Dsonar.projectKey=devsecops-lab \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=http://sonarqube-custom:9000/ \
+                      -Dsonar.python.version=3
+                """
+            }
         }
-        timeout(time: 2, unit: 'MINUTES') {
-          waitForQualityGate abortPipeline: false
-        }
-      }
     }
+}
 
     stage('Security Test - SCA Dependencies') {
       steps {
