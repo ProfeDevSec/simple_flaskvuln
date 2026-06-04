@@ -51,40 +51,48 @@ stage('Analyze - SonarQube') {
 stage('Security Test - SCA Dependencies') {
     steps {
         sh """
-          rm -rf \${WORKSPACE}/dc-report || true
-          mkdir -p \${WORKSPACE}/dc-report
-          chmod 777 \${WORKSPACE}/dc-report
-        
-          docker run --rm \
-            --network devsecops-network \
-            -v \${WORKSPACE}:/src \
-            -v \${WORKSPACE}/dc-report:/report \
-            -v dc-nvd-data:/usr/share/dependency-check/data \
-            owasp/dependency-check:latest \
-              --scan /src \
-              --format HTML \
-              --format XML \
-              --out /report \
-              --project devsecops-lab \
-              --noupdate || true
-        
-          # Devolver propiedad a Jenkins para que pueda leer los archivos
-          docker run --rm \
-            -v \${WORKSPACE}/dc-report:/report \
-            alpine chown -R \$(id -u):\$(id -g) /report
-        
-          echo "=== Contenido dc-report ==="
-          ls -la \${WORKSPACE}/dc-report/
-        """
-        publishHTML(target: [
-          allowMissing         : true,
-          alwaysLinkToLastBuild: true,
-          keepAll              : true,
-          reportDir            : 'dc-report',
-          reportFiles          : 'dependency-check-report.html',
-          reportName           : 'Dependency-Check Report'
-        ])
-      sh 'find ${WORKSPACE} -name "*.html" -o -name "*.xml" -o -name "*.json" 2>/dev/null | head -30'
+      # Crear volumen limpio para los reportes
+      docker volume rm dc-report-vol 2>/dev/null || true
+      docker volume create dc-report-vol
+
+      # Correr dependency-check escribiendo en el volumen (sin problemas de permisos)
+      docker run --rm \
+        --network devsecops-network \
+        -v \${WORKSPACE}:/src:ro \
+        -v dc-report-vol:/report \
+        -v dc-nvd-data:/usr/share/dependency-check/data \
+        owasp/dependency-check:latest \
+          --scan /src \
+          --format HTML \
+          --format XML \
+          --out /report \
+          --project devsecops-lab \
+          --noupdate || true
+
+      # Verificar que el volumen tiene contenido
+      docker run --rm \
+        -v dc-report-vol:/report \
+        alpine ls -la /report/
+
+      # Copiar del volumen al workspace con permisos correctos
+      mkdir -p \${WORKSPACE}/dc-report
+      docker run --rm \
+        -v dc-report-vol:/report \
+        -v \${WORKSPACE}/dc-report:/dest \
+        alpine sh -c "cp /report/* /dest/ && chmod 644 /dest/*"
+
+      echo "=== Archivos copiados al workspace ==="
+      ls -la \${WORKSPACE}/dc-report/
+    """
+
+    publishHTML(target: [
+      allowMissing         : true,
+      alwaysLinkToLastBuild: true,
+      keepAll              : true,
+      reportDir            : "${WORKSPACE}/dc-report",
+      reportFiles          : 'dependency-check-report.html',
+      reportName           : 'Dependency-Check Report'
+    ])
     }
 }    
 
