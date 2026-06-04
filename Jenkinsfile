@@ -74,6 +74,10 @@ stage('Security Test - SCA Dependencies') {
         -v dc-report-vol:/report \
         alpine ls -la /report/
 
+      docker run --rm \
+        -v dc-report-vol:/report \
+        alpine cat /report/dependency-check-report.xml  
+
       # Copiar del volumen al workspace con permisos correctos
       mkdir -p \${WORKSPACE}/dc-report
     """
