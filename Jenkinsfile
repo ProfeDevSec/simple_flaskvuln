@@ -76,6 +76,8 @@ stage('Security Test - SCA Dependencies') {
 
       # Copiar del volumen al workspace con permisos correctos
       mkdir -p \${WORKSPACE}/dc-report
+    """
+    sh '''  
       docker run --rm \
         -v dc-report-vol:/report \
         -v \${WORKSPACE}/dc-report:/dest \
@@ -83,7 +85,7 @@ stage('Security Test - SCA Dependencies') {
 
       echo "=== Archivos copiados al workspace ==="
       ls -la \${WORKSPACE}/dc-report/
-    """
+    '''
 
     publishHTML(target: [
       allowMissing         : true,
