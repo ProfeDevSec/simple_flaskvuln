@@ -49,34 +49,30 @@ stage('Analyze - SonarQube') {
 
 stage('Security Test - SCA Dependencies') {
     steps {
-        withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_KEY')]) {
-            sh """
-    mkdir -p \${WORKSPACE}/dc-report
+        sh """
+            mkdir -p \${WORKSPACE}/dc-report
+            chmod 777 \${WORKSPACE}/dc-report
 
-    docker run --rm \
-      --network devsecops-network \
-      -v \${WORKSPACE}:/src \
-      -v \${WORKSPACE}/dc-report:/report \
-      --user root \
-      owasp/dependency-check:latest \
-        --scan /src \
-        --format HTML \
-        --format XML \
-        --out /report \
-        --project devsecops-lab \
-        --nvdApiKey \${NVD_KEY}
-
-    # Devolver la propiedad a Jenkins después
-    docker run --rm \
-      -v \${WORKSPACE}/dc-report:/report \
-      alpine chown -R \$(id -u):\$(id -g) /report
-"""
-        }
+            docker run --rm \
+              --network devsecops-network \
+              -v \${WORKSPACE}:/src \
+              -v \${WORKSPACE}/dc-report:/report \
+              -v dc-nvd-data:/usr/share/dependency-check/data \
+              --user \$(id -u):\$(id -g) \
+              owasp/dependency-check:latest \
+                --scan /src \
+                --format HTML \
+                --format XML \
+                --out /report \
+                --project devsecops-lab \
+                --noupdate
+        """
         dependencyCheckPublisher(
             pattern: '**/dc-report/dependency-check-report.xml'
         )
     }
-}
+}    
+
 
     stage('Security Test - DAST ZAP') {
       steps {
