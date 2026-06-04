@@ -28,7 +28,8 @@ pipeline {
         sh '''
           docker rm -f flask-app || true
           docker run -d --name flask-app -p 5000:5000 flask-vuln-app:${BUILD_NUMBER}
-          sleep 5
+          sleep 5+
+          curl -sf http://localhost:5000/hello?name=test || echo "App no responde"
         '''
       }
     }
@@ -70,33 +71,41 @@ stage('Security Test - SCA Dependencies') {
             chmod -R 755 \${WORKSPACE}/dc-report    
         """
         dependencyCheckPublisher(
-            pattern: '**/dc-report/dependency-check-report.xml'
+            pattern: 'dc-report/dependency-check-report.xml'
         )
     }
 }    
 
 
-    stage('Security Test - DAST ZAP') {
-      steps {
+stage('Security Test - DAST ZAP') {
+    steps {
         sh """
-          mkdir -p ${REPORT_DIR}
-          docker run --rm --network host \\
-            -v \$(pwd)/${REPORT_DIR}:/zap/wrk \\
-            ghcr.io/zaproxy/zaproxy:stable \\
-            zap-baseline.py \\
-              -t ${APP_URL} \\
-              -r zap_report.html \\
-              -J zap_report.json --auto || true
-        """
-        publishHTML target: [
-          allowMissing: true, alwaysLinkToLastBuild: true,
-          reportDir: "${REPORT_DIR}", reportFiles: 'zap_report.html',
-          reportName: 'OWASP ZAP Report'
-        ]
-      }
-    }
+            rm -rf \${WORKSPACE}/zap-reports
+            mkdir -p \${WORKSPACE}/zap-reports
+            chmod 777 \${WORKSPACE}/zap-reports
 
-  }
+            docker run --rm \
+              --network host \
+              -v \${WORKSPACE}/zap-reports:/zap/wrk/:rw \
+              --user \$(id -u):\$(id -g) \
+              ghcr.io/zaproxy/zaproxy:stable \
+                zap-baseline.py \
+                  -t http://localhost:5000/hello?name=test \
+                  -r zap_report.html \
+                  -J zap_report.json \
+                  --auto || true
+        """
+
+        publishHTML(target: [
+            allowMissing         : true,
+            alwaysLinkToLastBuild: true,
+            keepAll              : true,
+            reportDir            : 'zap-reports',
+            reportFiles          : 'zap_report.html',
+            reportName           : 'OWASP ZAP Report'
+        ])
+    }
+}
 
   post {
     always {
