@@ -2,8 +2,8 @@ pipeline {
   agent any
 
   environment {
-    APP_URL       = 'http://host.docker.internal:5000'
-    SONAR_HOST    = 'http://host.docker.internal:9000'
+    APP_URL       = 'http://localhost:5000'
+    SONAR_HOST    = 'http://sonarqube-custom:9000/'
     REPORT_DIR    = 'zap-reports'
     DC_HOME       = tool 'dependency-check'
   }
