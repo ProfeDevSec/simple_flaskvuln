@@ -51,26 +51,30 @@ stage('Analyze - SonarQube') {
 stage('Security Test - SCA Dependencies') {
     steps {
         sh """
-            mkdir -p \${WORKSPACE}/dc-report
-            chmod 777 \${WORKSPACE}/dc-report
-
-            docker run --rm \
-              --network devsecops-network \
-              -v \${WORKSPACE}:/src \
-              -v \${WORKSPACE}/dc-report:/report \
-              -v dc-nvd-data:/usr/share/dependency-check/data \
-              --user \$(id -u):\$(id -g) \
-              owasp/dependency-check:latest \
-                --scan /src \
-                --format HTML \
-                --format XML \
-                --out /report \
-                --project devsecops-lab \
-                --noupdate
-
-            chmod -R 755 \${WORKSPACE}/dc-report    
-            echo "=== Contenido dc-report ==="
-            ls -la \${WORKSPACE}/dc-report/ || echo "Directorio vacío"
+          rm -rf \${WORKSPACE}/dc-report || true
+          mkdir -p \${WORKSPACE}/dc-report
+          chmod 777 \${WORKSPACE}/dc-report
+        
+          docker run --rm \
+            --network devsecops-network \
+            -v \${WORKSPACE}:/src \
+            -v \${WORKSPACE}/dc-report:/report \
+            -v dc-nvd-data:/usr/share/dependency-check/data \
+            owasp/dependency-check:latest \
+              --scan /src \
+              --format HTML \
+              --format XML \
+              --out /report \
+              --project devsecops-lab \
+              --noupdate || true
+        
+          # Devolver propiedad a Jenkins para que pueda leer los archivos
+          docker run --rm \
+            -v \${WORKSPACE}/dc-report:/report \
+            alpine chown -R \$(id -u):\$(id -g) /report
+        
+          echo "=== Contenido dc-report ==="
+          ls -la \${WORKSPACE}/dc-report/
         """
         publishHTML(target: [
           allowMissing         : true,
@@ -95,13 +99,16 @@ stage('Security Test - DAST ZAP') {
             docker run --rm \
               --network host \
               -v \${WORKSPACE}/zap-reports:/zap/wrk/:rw \
-              --user \$(id -u):\$(id -g) \
               ghcr.io/zaproxy/zaproxy:stable \
                 zap-baseline.py \
                   -t http://localhost:5000/hello?name=test \
                   -r zap_report.html \
                   -J zap_report.json \
                   --auto || true
+                  
+            docker run --rm \
+            -v \${WORKSPACE}/zap-reports:/zap/wrk/:rw \
+            alpine chown -R \$(id -u):\$(id -g) /zap/wrk
 
              echo "=== Contenido zap-reports ==="
              ls -la \${WORKSPACE}/zap-reports/ || echo "Directorio vacío" 
