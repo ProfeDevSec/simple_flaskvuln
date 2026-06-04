@@ -48,12 +48,24 @@ stage('Analyze - SonarQube') {
 }
 
     stage('Security Test - SCA Dependencies') {
-      steps {
-        dependencyCheck additionalArguments: '--scan . --format HTML --format XML',
-                        odcInstallation: 'dependency-check'
-        dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-      }
+    steps {
+        sh """
+            docker run --rm \
+              --network devsecops-network \
+              -v \${WORKSPACE}:/src \
+              -v \${WORKSPACE}/dc-report:/report \
+              owasp/dependency-check:latest \
+                --scan /src \
+                --format HTML \
+                --format XML \
+                --out /report \
+                --project devsecops-lab
+        """
+        dependencyCheckPublisher(
+            pattern: '**/dc-report/dependency-check-report.xml'
+        )
     }
+}
 
     stage('Security Test - DAST ZAP') {
       steps {
